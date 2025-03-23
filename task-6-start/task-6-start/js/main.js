@@ -1,3 +1,6 @@
+/**Worked on by Simon Medalssy :) */
+
+
 window.onload = run;
 
 function run() {
