@@ -377,7 +377,7 @@ const chairConfigs = [
 
 // Load and configure chairs
 gltfLoader.load(
-    'static/models/Simon Models/Chair/ArmChair_01_4k.gltf', // Path to the chair model
+    'static/models/Simon Models/Chair/ArmChair_01_1k.gltf', // Path to the chair model
     (gltf) => {
         console.log('Chair models loaded successfully');
 
@@ -413,7 +413,7 @@ gltfLoader.load(
 /** Soap Box Table */
 // Load and configure table
 gltfLoader.load(
-    'static/models/Simon Models/Table/side_table_tall_01_4k.gltf', // Replace with the actual path to your table model
+    'static/models/Simon Models/Table/side_table_tall_01_1k.gltf', // Replace with the actual path to your table model
     (gltf) => {
         console.log('Table model loaded successfully');
 
@@ -485,7 +485,7 @@ gltfLoader.load(
 /** Soap Box Photos */
 
 gltfLoader.load(
-    'static/models/Simon Models/frame/fancy_picture_frame_01_4k.gltf', // Replace with the actual path to your frame model
+    'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Replace with the actual path to your frame model
     (gltf) => {
         console.log('Frame model loaded successfully');
 
@@ -528,7 +528,7 @@ gltfLoader.load(
 );
 
 gltfLoader.load(
-    'static/models/Simon Models/frame/fancy_picture_frame_01_4k.gltf', // Replace with the actual path to your frame model
+    'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Replace with the actual path to your frame model
     (gltf) => {
         console.log('Second frame model loaded successfully');
 
@@ -595,7 +595,7 @@ const unibankFrameConfigs = [
 // Load and configure frames dynamically
 unibankFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
-        'static/models/Simon Models/frame/fancy_picture_frame_01_4k.gltf', // Path to the frame model
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
         (gltf) => {
             console.log(`Frame ${index + 1} model loaded successfully`);
 
@@ -761,7 +761,7 @@ const frameConfigs = [
 // Load and configure frames
 frameConfigs.forEach((config, index) => {
     gltfLoader.load(
-        'static/models/Simon Models/frame/fancy_picture_frame_01_4k.gltf', // Path to the frame model
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
         (gltf) => {
             console.log(`Frame ${index + 1} model loaded successfully`);
 
@@ -834,7 +834,7 @@ const isometricFrameConfigs = [
 // Load and configure frames dynamically
 isometricFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
-        'static/models/Simon Models/frame/fancy_picture_frame_01_4k.gltf', // Path to the frame model
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
         (gltf) => {
             console.log(`Isometric frame ${index + 1} model loaded successfully`);
 
