@@ -39,11 +39,17 @@ camera.position.z = -310.555;
 camera.rotation.y = 4;
 
 
+// Set up the renderer
 const renderer = new THREE.WebGLRenderer();
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth / 2, window.innerHeight / 2); // Lower renderer resolution
-renderer.setAnimationLoop(animate);
+renderer.setSize(window.innerWidth / 2, window.innerHeight / 2); // Half the resolution
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.top = '50%';
+renderer.domElement.style.left = '50%';
+renderer.domElement.style.transform = 'translate(-50%, -50%)'; // Center align the canvas
 document.body.appendChild(renderer.domElement);
+
+renderer.setAnimationLoop(animate);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 
@@ -147,6 +153,46 @@ controls.addEventListener('lock', function () {
 });
 
 
+// Background music
+const audioListener = new THREE.AudioListener();
+camera.add(audioListener);
+
+const backgroundMusic = new THREE.Audio(audioListener);
+const audioLoader = new THREE.AudioLoader();
+
+audioLoader.load('static/Sound/Background.mp3', function (buffer) {
+    backgroundMusic.setBuffer(buffer);
+    backgroundMusic.setLoop(true);
+    backgroundMusic.setVolume(0.05); // Adjust volume as needed
+});
+
+// Start playback after user interaction
+document.addEventListener('click', () => {
+    if (!backgroundMusic.isPlaying) {
+        backgroundMusic.play();
+    }
+});
+
+// Footstep sound
+const footstepSound = new THREE.Audio(audioListener);
+audioLoader.load('static/Sound/Footsteps.mp3', function (buffer) {
+    footstepSound.setBuffer(buffer);
+    footstepSound.setLoop(true);
+    footstepSound.setVolume(0.2); // Adjust volume as needed
+});
+
+function updateFootstepSound() {
+    if (moveForward || moveBackward || moveLeft || moveRight) {
+        if (!footstepSound.isPlaying) {
+            footstepSound.play();
+        }
+    } else {
+        if (footstepSound.isPlaying) {
+            footstepSound.stop();
+        }
+    }
+}
+
 // Models
 const gltfLoader = new GLTFLoader()
 const textureLoader = new THREE.TextureLoader();
@@ -174,6 +220,91 @@ scene.add(directionalLight)
 const raycaster = new THREE.Raycaster();
 const collisionObjects = [];
 const limitedCollisionObjects = collisionObjects.slice(0, 10); // Limit collision objects for raycasting
+
+// Array to store interactive objects
+const interactiveObjects = [];
+
+// Detect if the cursor is looking at an object and close enough
+const raycasterD = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function onMouseMove(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+}
+
+function onMouseDown(event) {
+    if (event.button === 0) { // Check if the left mouse button is clicked
+        raycasterD.setFromCamera(mouse, camera);
+        const intersects = raycasterD.intersectObjects(interactiveObjects);
+
+        if (intersects.length > 0) {
+            const object = intersects[0].object;
+            const distance = intersects[0].distance;
+
+            if (distance < 15) { // Increased interaction distance
+                showInfoWindow(object); // Show information about the object
+            }
+        }
+    }
+}
+
+function showInfoWindow(object) {
+    const infoWindow = document.createElement('div');
+    infoWindow.style.position = 'fixed'; // Fixed position for consistent placement
+    infoWindow.style.top = '10%'; // Leave some space at the top
+    infoWindow.style.left = '0'; // Align to the left side of the screen
+    infoWindow.style.width = '25%'; // Restrict to 25% of the screen width (left half)
+    infoWindow.style.height = 'auto'; // Adjust height based on content
+    infoWindow.style.padding = '5px'; // Smaller padding for a compact look
+    infoWindow.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; // Slightly transparent background
+    infoWindow.style.color = 'white';
+    infoWindow.style.borderRight = '2px solid white';
+    infoWindow.style.overflowY = 'auto';
+    infoWindow.style.zIndex = '1000'; // Ensure it appears above other elements
+    infoWindow.style.fontSize = '0.4rem'; // Much smaller font size for compact text
+    infoWindow.style.lineHeight = '0.6rem'; // Adjust line height for better spacing
+    infoWindow.style.transition = 'left 0.3s ease'; // Smooth transition for sliding in
+    infoWindow.innerHTML = `
+        <h3 style="margin: 0 0 5px 0; font-size: 0.6rem;">Object Information</h3>
+        <p><strong>Name:</strong> ${object.parent.name || 'Unnamed Object'}</p>
+        <p><strong>Description:</strong> ${object.parent.description || 'No description available.'}</p>
+        <p style="margin-top: 5px;">Press "X" to close this window.</p>
+    `;
+    document.body.appendChild(infoWindow);
+
+    // Slide the info window into view
+    setTimeout(() => {
+        infoWindow.style.left = '0';
+    }, 10);
+
+    function closeInfoWindow(event) {
+        if (event.code === 'KeyX') {
+            // Slide the info window out of view
+            infoWindow.style.left = '-25%'; // Move it off-screen
+            setTimeout(() => {
+                document.body.removeChild(infoWindow);
+            }, 300); // Wait for the transition to complete
+            document.removeEventListener('keydown', closeInfoWindow);
+        }
+    }
+
+    document.addEventListener('keydown', closeInfoWindow);
+}
+
+// Add event listeners for interaction
+document.addEventListener('mousemove', onMouseMove);
+document.addEventListener('mousedown', onMouseDown);
+
+// Expand the bounding boxes of interactive objects for easier clicking
+interactiveObjects.forEach(mesh => {
+    if (mesh.geometry) {
+        mesh.geometry.computeBoundingBox();
+        const boundingBox = mesh.geometry.boundingBox.clone();
+        boundingBox.expandByScalar(2); // Expand the bounding box
+        mesh.geometry.boundingBox = boundingBox;
+    }
+});
 
 gltfLoader.load(
     'static/models/Path/Path1/Path.gltf',
@@ -462,6 +593,13 @@ gltfLoader.load(
             if (child.isMesh) {
                 child.material.map = soapBoxTexture;
                 child.material.needsUpdate = true;
+
+                // Add to interactive objects
+                interactiveObjects.push(child);
+
+                // Assign name and description
+                soapBox.name = "Soap Box";
+                soapBox.description = "A beautifully crafted soap box with intricate details.";
             }
         });
 
@@ -482,158 +620,110 @@ gltfLoader.load(
     }
 );
 
-/** Soap Box Photos */
-
-gltfLoader.load(
-    'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Replace with the actual path to your frame model
-    (gltf) => {
-        console.log('Frame model loaded successfully');
-
-        // Access the frame model
-        const frame = gltf.scene;
-
-        // Scale the frame to make it larger
-        frame.scale.set(40, 40, 40); // Adjust scale as necessary
-
-        // Set the position of the frame
-        frame.position.set(362, 13, -195); // Adjust position as necessary
-
-        // Rotate the frame to face the camera
-        frame.rotation.y = -Math.PI / 2; // Rotate 90 degrees to face the camera
-
-        // Add the frame to the scene
-        scene.add(frame);
-
-        // Create a plane for the photo
-        const photoGeometry = new THREE.PlaneGeometry(0.55, 0.39); // Adjust width and height to fit the frame
-        const photoTexture = textureLoader.load(
-            'static/models/Simon Models/frame/soapbox_texture.png', // Replace with the path to your PNG
-            () => console.log('Photo texture loaded successfully'),
-            undefined,
-            (error) => console.error('Error loading photo texture:', error)
-        );
-        const photoMaterial = new THREE.MeshBasicMaterial({ map: photoTexture });
-        const photo = new THREE.Mesh(photoGeometry, photoMaterial);
-
-        // Position the photo inside the frame
-        photo.position.set(0, 0, 0.01); // Adjust Z to place it slightly in front of the frame
-        frame.add(photo); // Add the photo as a child of the frame
+/** Soap Box Frames */
+const soapBoxFrameConfigs = [
+    {
+        position: { x: 362, y: 13, z: -195 },
+        rotationY: -Math.PI / 2,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/frame/soapbox_texture.png',
+        name: "Soap Box 2D render",
+        description: "The original 2D render of the soap box. It was printed out and folded to create a real, physical box."
     },
-    (progress) => {
-        console.log('Loading frame model progress:', progress);
-    },
-    (error) => {
-        console.error('Error loading frame model:', error);
+    {
+        position: { x: 362, y: 13, z: -225 },
+        rotationY: -Math.PI / 2,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/frame/soapbox_blender.png',
+        name: "Soap Box Blender Render",
+        description: "A 3D rendered version of the soapbox, made on blender."
     }
-);
+];
 
-gltfLoader.load(
-    'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Replace with the actual path to your frame model
-    (gltf) => {
-        console.log('Second frame model loaded successfully');
+// Load and configure Soap Box frames dynamically
+soapBoxFrameConfigs.forEach((config, index) => {
+    gltfLoader.load(
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf',
+        (gltf) => {
+            console.log(`Soap Box frame ${index + 1} loaded successfully`);
 
-        // Access the second frame model
-        const secondFrame = gltf.scene;
+            const frame = gltf.scene;
+            frame.position.set(config.position.x, config.position.y, config.position.z);
+            frame.rotation.y = config.rotationY;
+            frame.scale.set(config.scale.x, config.scale.y, config.scale.z);
+            scene.add(frame);
 
-        // Scale the second frame to match the first one
-        secondFrame.scale.set(40, 40, 40); // Same scale as the first frame
+            const photoTexture = textureLoader.load(config.texturePath);
+            const photoMaterial = new THREE.MeshBasicMaterial({ map: photoTexture });
+            const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.39), photoMaterial);
+            photo.position.set(0, 0, 0.01);
+            frame.add(photo);
 
-        // Set the position of the second frame to the left of the first one
-        secondFrame.position.set(362, 13, -225); // Adjust X to move it to the left
-
-        // Rotate the second frame to face the camera
-        secondFrame.rotation.y = -Math.PI / 2; // Rotate 90 degrees to face the camera
-
-        // Add the second frame to the scene
-        scene.add(secondFrame);
-
-        // Create a plane for the new photo
-        const newPhotoTexture = textureLoader.load(
-            'static/models/Simon Models/frame/soapbox_blender.png', // Replace with the correct path
-            () => console.log('New photo texture loaded successfully'),
-            undefined,
-            (error) => console.error('Error loading new photo texture:', error)
-        );
-
-        const newPhotoMaterial = new THREE.MeshBasicMaterial({ map: newPhotoTexture });
-        const newPhoto = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.39), newPhotoMaterial);
-
-        // Position the new photo inside the second frame
-        newPhoto.position.set(0, 0, 0.01); // Adjust Z to place it slightly in front of the frame
-        secondFrame.add(newPhoto); // Add the new photo as a child of the second frame
-    },
-    (progress) => {
-        console.log('Loading second frame model progress:', progress);
-    },
-    (error) => {
-        console.error('Error loading second frame model:', error);
-    }
-);
+            frame.traverse((child) => {
+                if (child.isMesh) {
+                    interactiveObjects.push(child);
+                    frame.name = config.name; // Assign custom name
+                    frame.description = config.description; // Assign custom description
+                }
+            });
+        }
+    );
+});
 
 /** Unibank and Additional Frames Configuration */
 const unibankFrameConfigs = [
     {
-        position: { x: 171, y: 13, z: -420 }, // Position of the Unibank frame
-        rotationY: -Math.PI / 10 - Math.PI / 45, // Slight counterclockwise rotation
-        scale: { x: 40, y: 40, z: 40 }, // Scale of the frame
-        texturePath: 'static/models/Simon Models/unibank/Unibank Black.png' // Path to the Unibank logo
+        position: { x: 171, y: 13, z: -420 },
+        rotationY: -Math.PI / 10 - Math.PI / 45,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/unibank/Unibank Black.png',
+        name: "Unibank Logo",
+        description: "A logo made for a made-up company called Unibank."
     },
     {
-        position: { x: 211, y: 13, z: -404.6 }, // Position of the frame to the right
-        rotationY: -Math.PI / 10 - Math.PI / 45, // Same rotation as the Unibank frame
-        scale: { x: 40, y: 40, z: 40 }, // Scale of the frame
-        texturePath: 'static/models/Simon Models/unibank/Unistore.png' // Replace with the correct texture path
+        position: { x: 211, y: 13, z: -404.6 },
+        rotationY: -Math.PI / 10 - Math.PI / 45,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/unibank/Unistore.png',
+        name: "Unistore Logo",
+        description: "A mockup of a storefront with the Unibank logo as its sign."
     },
     {
-        position: { x: 131, y: 13, z: -435 }, // Position of the frame to the left
-        rotationY: -Math.PI / 10 - Math.PI / 45, // Same rotation as the Unibank frame
-        scale: { x: 40, y: 40, z: 40 }, // Scale of the frame
-        texturePath: 'static/models/Simon Models/unibank/Graphite_Drawn_Logo_Mockup.png' // Replace with the correct texture path
+        position: { x: 131, y: 13, z: -435 },
+        rotationY: -Math.PI / 10 - Math.PI / 45,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/unibank/Graphite_Drawn_Logo_Mockup.png',
+        name: "Graphite Unibank Logo",
+        description: "A mockup of papers with the Unibank logo."
     }
 ];
 
-// Load and configure frames dynamically
+// Load and configure Unibank frames dynamically
 unibankFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
-        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf',
         (gltf) => {
-            console.log(`Frame ${index + 1} model loaded successfully`);
+            console.log(`Unibank frame ${index + 1} loaded successfully`);
 
-            // Access the frame model
             const frame = gltf.scene;
-
-            // Set position
             frame.position.set(config.position.x, config.position.y, config.position.z);
-
-            // Set rotation
             frame.rotation.y = config.rotationY;
-
-            // Set scale
             frame.scale.set(config.scale.x, config.scale.y, config.scale.z);
-
-            // Add the frame to the scene
             scene.add(frame);
 
-            // Create a plane for the photo
-            const photoTexture = textureLoader.load(
-                config.texturePath, // Use the texture path from the configuration
-                () => console.log(`Photo texture for frame ${index + 1} loaded successfully`),
-                undefined,
-                (error) => console.error(`Error loading photo texture for frame ${index + 1}:`, error)
-            );
-
+            const photoTexture = textureLoader.load(config.texturePath);
             const photoMaterial = new THREE.MeshBasicMaterial({ map: photoTexture });
             const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.39), photoMaterial);
+            photo.position.set(0, 0, 0.01);
+            frame.add(photo);
 
-            // Position the photo inside the frame
-            photo.position.set(0, 0, 0.01); // Slightly in front of the frame
-            frame.add(photo); // Add the photo as a child of the frame
-        },
-        (progress) => {
-            console.log(`Loading frame ${index + 1} model progress:`, progress);
-        },
-        (error) => {
-            console.error(`Error loading frame ${index + 1} model:`, error);
+            frame.traverse((child) => {
+                if (child.isMesh) {
+                    interactiveObjects.push(child);
+                    frame.name = config.name; // Assign custom name
+                    frame.description = config.description; // Assign custom description
+                }
+            });
         }
     );
 });
@@ -642,123 +732,168 @@ unibankFrameConfigs.forEach((config, index) => {
 /**Car Pics Exhibit */
 // Define frame configurations
 const frameConfigs = [
-    //Back Wall
+    // Back Wall
     {
         position: { x: -228, y: 11, z: -11 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/Ferrari-2.jpg'
+        texturePath: 'static/models/Simon Models/cars/Ferrari-2.jpg',
+        name: "Ferrari Side Profile",
+        description: "A stunning Ferrari captured in a sleek side profile."
     },
     {
         position: { x: -228, y: 11, z: -25.875 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/Ferrari.jpg'
+        texturePath: 'static/models/Simon Models/cars/Ferrari.jpg',
+        name: "Ferrari Close-Up",
+        description: "A close-up of a Ferrari showcasing its iconic design."
     },
     {
         position: { x: -228, y: 11, z: -40.75 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/Fiat.jpg'
+        texturePath: 'static/models/Simon Models/cars/Fiat.jpg',
+        name: "Classic Fiat",
+        description: "A classic Fiat, a symbol of timeless automotive design."
     },
     {
         position: { x: -228, y: 11, z: -55.625 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/Fiat_Yellow.jpg'
+        texturePath: 'static/models/Simon Models/cars/Fiat_Yellow.jpg',
+        name: "Yellow Fiat",
+        description: "A vibrant yellow Fiat, radiating charm and personality."
     },
     {
         position: { x: -228, y: 11, z: -70.5 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/Oldporsche.jpg'
+        texturePath: 'static/models/Simon Models/cars/Oldporsche.jpg',
+        name: "Vintage Porsche",
+        description: "A vintage Porsche, a masterpiece of engineering and style."
     },
     {
         position: { x: -228, y: 11, z: -85.375 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/McLarenOJ.jpg'
+        texturePath: 'static/models/Simon Models/cars/McLarenOJ.jpg',
+        name: "Orange McLaren",
+        description: "A bold McLaren in orange, exuding speed and power."
     },
     {
         position: { x: -228, y: 11, z: -100.25 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/McLarenTail.jpg'
+        texturePath: 'static/models/Simon Models/cars/McLarenTail.jpg',
+        name: "McLaren Rear View",
+        description: "The rear view of a McLaren, highlighting its aerodynamic design."
     },
     {
         position: { x: -228, y: 11, z: -115.125 },
         rotationY: Math.PI / 2,
-        texturePath: 'static/models/Simon Models/cars/McLarenUTT.jpg'
+        texturePath: 'static/models/Simon Models/cars/McLarenUTT.jpg',
+        name: "McLaren Concept",
+        description: "A unique McLaren concept, blending innovation and artistry."
     },
 
-    //Left Wall
+    // Left Wall
     {
         position: { x: -216, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/Old.jpg'
+        texturePath: 'static/models/Simon Models/cars/Old.jpg',
+        name: "Classic Car",
+        description: "A nostalgic look at a classic car from a bygone era."
     },
     {
         position: { x: -201.125, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/PorscheBlack.jpg'
+        texturePath: 'static/models/Simon Models/cars/PorscheBlack.jpg',
+        name: "Black Porsche",
+        description: "A sleek black Porsche, epitomizing elegance and performance."
     },
     {
         position: { x: -186.25, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/PorscheBlack.jpg'
+        texturePath: 'static/models/Simon Models/cars/McLaren-2.png',
+        name: "McLaren",
+        description: "A sideangle view of a McLaren, edited using Lightroom and Photoshop AI for the backgroundColor."
     },
     {
         position: { x: -171.375, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/PorscheFront.jpg'
+        texturePath: 'static/models/Simon Models/cars/PorscheFront.jpg',
+        name: "Porsche Front View",
+        description: "The front view of a Porsche, a true icon of automotive design."
     },
     {
         position: { x: -156.5, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/PorscheGrey.jpg'
+        texturePath: 'static/models/Simon Models/cars/PorscheGrey.jpg',
+        name: "Gray Porsche",
+        description: "A gray Porsche, blending sophistication with power."
     },
     {
         position: { x: -141.625, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/PorscheNeon.jpg'
+        texturePath: 'static/models/Simon Models/cars/PorscheNeon.jpg',
+        name: "Neon Porsche",
+        description: "A neon-lit Porsche, a modern take on a classic design."
     },
     {
         position: { x: -126.75, y: 11, z: 2 },
         rotationY: -Math.PI,
-        texturePath: 'static/models/Simon Models/cars/Rari.jpg'
+        texturePath: 'static/models/Simon Models/cars/Rari.jpg',
+        name: "Ferrari",
+        description: "A Ferrari in its full glory, a symbol of speed and luxury."
     },
-    //Right Wall
+
+    // Right Wall
     {
         position: { x: -216, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/RariRain.jpg'
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/RariRain.jpg',
+        name: "Ferrari in Rain",
+        description: "A Ferrari captured in the rain, blending beauty with nature."
     },
     {
         position: { x: -201.125, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/RariSnow.jpg'
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/RariSnow.jpg',
+        name: "Ferrari in Snow",
+        description: "A Ferrari in the snow, a striking contrast of power and serenity."
     },
     {
         position: { x: -186.25, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/RariTail.jpg'
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/RariTail.jpg',
+        name: "Ferrari Rear View",
+        description: "The tail view of a Ferrari, showcasing its aerodynamic curves."
     },
     {
         position: { x: -171.375, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/RariY.jpg'
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/RariY.jpg',
+        name: "Yellow Ferrari",
+        description: "A Ferrari in yellow, a bold statement of style and performance."
     },
     {
         position: { x: -156.5, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/SkylineXKimlee.jpg'
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/SkylineXKimlee.jpg',
+        name: "Nissan Skyline",
+        description: "A Nissan Skyline, a legend in the world of sports cars."
     },
     {
         position: { x: -141.625, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/UnknownCar.jpg'
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/UnknownCar.jpg',
+        name: "Unknown Car",
+        description: "An unknown car, a mystery waiting to be unraveled."
     },
     {
         position: { x: -126.75, y: 11, z: -128 },
-        rotationY: Math.PI*2,
-        texturePath: 'static/models/Simon Models/cars/Vette.jpg'
-    },
+        rotationY: Math.PI * 2,
+        texturePath: 'static/models/Simon Models/cars/Vette.jpg',
+        name: "Corvette",
+        description: "A Corvette, a true American classic."
+    }
 ];
 
-// Load and configure frames
+// Load and configure car photo frames dynamically
 frameConfigs.forEach((config, index) => {
     gltfLoader.load(
         'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
@@ -775,13 +910,13 @@ frameConfigs.forEach((config, index) => {
             frame.rotation.y = config.rotationY;
 
             // Scale the frame
-            frame.scale.set(22, 22, 22); // Adjust scale as necessary
+            frame.scale.set(22, 22, 22); // Restored original scale for the frames
 
             // Add the frame to the scene
             scene.add(frame);
 
             // Create a plane for the photo
-            const photoGeometry = new THREE.PlaneGeometry(0.55, 0.39); // Adjust width and height to fit the frame
+            const photoGeometry = new THREE.PlaneGeometry(0.55, 0.39); // Restored original dimensions for the photos
             const photoTexture = textureLoader.load(
                 config.texturePath, // Use the texture path from the configuration
                 () => console.log(`Photo texture for frame ${index + 1} loaded successfully`),
@@ -794,8 +929,17 @@ frameConfigs.forEach((config, index) => {
             const photo = new THREE.Mesh(photoGeometry, photoMaterial);
 
             // Position the photo inside the frame
-            photo.position.set(0, 0, 0.01); // Adjust Z to place it slightly in front of the frame
+            photo.position.set(0, 0, 0.01); // Slightly in front of the frame
             frame.add(photo); // Add the photo as a child of the frame
+
+            // Add to interactive objects
+            frame.traverse((child) => {
+                if (child.isMesh) {
+                    interactiveObjects.push(child);
+                    frame.name = config.name; // Use the custom name
+                    frame.description = config.description; // Use the custom description
+                }
+            });
 
             console.log(`Photo added to frame ${index + 1}`);
         },
@@ -808,74 +952,91 @@ frameConfigs.forEach((config, index) => {
     );
 });
 
-/** Isometric Drawings*/
+/** Isometric Drawings */
 const isometricFrameConfigs = [
     {
-        position: { x: 157, y: 13, z: 78 }, // Position of the first frame
+        position: { x: 157, y: 13, z: 78 },
         rotationY: Math.PI / 12 + Math.PI,
-        scale: { x: 40, y: 40, z: 40 }, // Scale of the frame
-        texturePath: 'static/models/Simon Models/Isometric/Isometric Suburbs Night.png' // Path to the first isometric drawing
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/Isometric/Isometric Suburbs Night.png',
+        name: "Isometric Suburbs Night",
+        description: "A serene isometric view of a suburban neighborhood at night."
     },
     {
-        position: { x: 103, y: 13, z: 45 }, // Position of the second frame
-        rotationY: Math.PI / 6 + Math.PI / 4 + Math.PI / 12 + Math.PI / 18, // Rotate slightly to face the viewer
-        scale: { x: 40, y: 40, z: 40 }, // Scale of the frame
-        texturePath: 'static/models/Simon Models/Isometric/Isometric Suburbs.png' // Path to the second isometric drawing
+        position: { x: 103, y: 13, z: 45 },
+        rotationY: Math.PI / 6 + Math.PI / 4 + Math.PI / 12 + Math.PI / 18,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/Isometric/Isometric Suburbs.png',
+        name: "Isometric Suburbs Day",
+        description: "A bright and colorful isometric depiction of a suburban area during the day."
     },
     {
-        position: { x: 191, y: 13
-            , z: 24 }, // Position of the third frame
-        rotationY: Math.PI / 3 + Math.PI / 4 + Math.PI, // Rotate slightly to face the viewer
-        scale: { x: 40, y: 40, z: 40 }, // Scale of the frame
-        texturePath: 'static/models/Simon Models/Isometric/Isometric Suburbs Night-01.png' // Path to the third isometric drawing
+        position: { x: 191, y: 13, z: 24 },
+        rotationY: Math.PI / 3 + Math.PI / 4 + Math.PI,
+        scale: { x: 40, y: 40, z: 40 },
+        texturePath: 'static/models/Simon Models/Isometric/Isometric Suburbs Night-01.png',
+        name: "Isometric Suburbs Alternate Night",
+        description: "An alternate isometric view of a suburban neighborhood under the night sky."
     }
 ];
 
-// Load and configure frames dynamically
+// Load and configure Isometric frames dynamically
 isometricFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
-        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf',
         (gltf) => {
-            console.log(`Isometric frame ${index + 1} model loaded successfully`);
+            console.log(`Isometric frame ${index + 1} loaded successfully`);
 
-            // Access the frame model
             const frame = gltf.scene;
-
-            // Set position
             frame.position.set(config.position.x, config.position.y, config.position.z);
-
-            // Set rotation
             frame.rotation.y = config.rotationY;
-
-            // Set scale
             frame.scale.set(config.scale.x, config.scale.y, config.scale.z);
-
-            // Add the frame to the scene
             scene.add(frame);
 
-            // Create a plane for the isometric drawing
-            const photoTexture = textureLoader.load(
-                config.texturePath, // Use the texture path from the configuration
-                () => console.log(`Isometric drawing texture for frame ${index + 1} loaded successfully`),
-                undefined,
-                (error) => console.error(`Error loading isometric drawing texture for frame ${index + 1}:`, error)
-            );
-
+            const photoTexture = textureLoader.load(config.texturePath);
             const photoMaterial = new THREE.MeshBasicMaterial({ map: photoTexture });
             const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.39), photoMaterial);
+            photo.position.set(0, 0, 0.01);
+            frame.add(photo);
 
-            // Position the photo inside the frame
-            photo.position.set(0, 0, 0.01); // Slightly in front of the frame
-            frame.add(photo); // Add the photo as a child of the frame
-        },
-        (progress) => {
-            console.log(`Loading isometric frame ${index + 1} model progress:`, progress);
-        },
-        (error) => {
-            console.error(`Error loading isometric frame ${index + 1} model:`, error);
+            frame.traverse((child) => {
+                if (child.isMesh) {
+                    interactiveObjects.push(child);
+                    frame.name = config.name; // Assign custom name
+                    frame.description = config.description; // Assign custom description
+                }
+            });
         }
     );
 });
+
+// Add custom descriptions for all assets
+function addCustomDescriptions() {
+    interactiveObjects.forEach((object) => {
+        if (object.name.includes("Soap Box")) {
+            object.parent.name = "Soap Box";
+            object.parent.description = "A beautifully crafted soap box with intricate details.";
+        } else if (object.name.includes("Soap Box Photo Frame 1")) {
+            object.parent.name = "Soap Box Photo Frame 1";
+            object.parent.description = "A photo frame showcasing the soap box in its full glory.";
+        } else if (object.name.includes("Soap Box Photo Frame 2")) {
+            object.parent.name = "Soap Box Photo Frame 2";
+            object.parent.description = "A second photo frame showcasing the soap box from another angle.";
+        } else if (object.name.includes("Unibank Frame")) {
+            object.parent.name = `Unibank Frame ${object.name.split(" ")[2]}`;
+            object.parent.description = `A Unibank photo displayed in frame ${object.name.split(" ")[2]}.`;
+        } else if (object.name.includes("Car Photo Frame")) {
+            object.parent.name = `Car Photo Frame ${object.name.split(" ")[3]}`;
+            object.parent.description = `A car photo displayed in frame ${object.name.split(" ")[3]}.`;
+        } else if (object.name.includes("Isometric Drawing Frame")) {
+            object.parent.name = `Isometric Drawing Frame ${object.name.split(" ")[3]}`;
+            object.parent.description = `An isometric drawing displayed in frame ${object.name.split(" ")[3]}.`;
+        }
+    });
+}
+
+// Call this function after all objects are loaded
+addCustomDescriptions();
 
 function movementUpdate() {
     controls.object.position.y = 10;
@@ -946,6 +1107,9 @@ function movementUpdate() {
             velocity.x = 0;
             velocity.z = 0;
         }
+
+        // Update footstep sound
+        updateFootstepSound();
     }
     
     prevTime = time;
