@@ -18,8 +18,8 @@ let canJump = false;
 
 
 let prevTime = performance.now();
-const velocity = new THREE.Vector3(); //movement of camera
-const direction = new THREE.Vector3(); //direction
+const velocity = new THREE.Vector3(); 
+const direction = new THREE.Vector3();
 const speed = 10;
 const moveSpeed = 300 * 2.5;
 
@@ -38,24 +38,21 @@ camera.position.x = -56.026;
 camera.position.z = -310.555;
 camera.rotation.y = 4;
 
-
-// Set up the renderer
 const renderer = new THREE.WebGLRenderer();
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth / 2, window.innerHeight / 2); // Half the resolution
+renderer.setSize(window.innerWidth / 2, window.innerHeight / 2);
 renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.top = '50%';
 renderer.domElement.style.left = '50%';
-renderer.domElement.style.transform = 'translate(-50%, -50%)'; // Center align the canvas
+renderer.domElement.style.transform = 'translate(-50%, -50%)';
 document.body.appendChild(renderer.domElement);
 
 renderer.setAnimationLoop(animate);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 
-scene.add(controls.object); //add camera to the scene
+scene.add(controls.object); 
 const onKeyDown = function (event) {
-    // console.log(event.code);
 
     switch (event.code) {
 
@@ -163,10 +160,9 @@ const audioLoader = new THREE.AudioLoader();
 audioLoader.load('static/Sound/Background.mp3', function (buffer) {
     backgroundMusic.setBuffer(buffer);
     backgroundMusic.setLoop(true);
-    backgroundMusic.setVolume(0.05); // Adjust volume as needed
+    backgroundMusic.setVolume(0.05); 
 });
 
-// Start playback after user interaction
 document.addEventListener('click', () => {
     if (!backgroundMusic.isPlaying) {
         backgroundMusic.play();
@@ -178,7 +174,7 @@ const footstepSound = new THREE.Audio(audioListener);
 audioLoader.load('static/Sound/Footsteps.mp3', function (buffer) {
     footstepSound.setBuffer(buffer);
     footstepSound.setLoop(true);
-    footstepSound.setVolume(0.2); // Adjust volume as needed
+    footstepSound.setVolume(0.2);
 });
 
 function updateFootstepSound() {
@@ -204,7 +200,7 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 2.4)
 scene.add(ambientLight)
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
-directionalLight.castShadow = false; // Disable shadows
+directionalLight.castShadow = false; 
 directionalLight.shadow.mapSize.set(1024, 1024)
 directionalLight.shadow.camera.far = 15
 directionalLight.shadow.camera.left = - 7
@@ -214,17 +210,12 @@ directionalLight.shadow.camera.bottom = - 7
 directionalLight.position.set(100, 100, 5)
 scene.add(directionalLight)
 
-// const objects = []
-
-// Raycasting
 const raycaster = new THREE.Raycaster();
 const collisionObjects = [];
-const limitedCollisionObjects = collisionObjects.slice(0, 10); // Limit collision objects for raycasting
+const limitedCollisionObjects = collisionObjects.slice(0, 10);
 
-// Array to store interactive objects
 const interactiveObjects = [];
 
-// Detect if the cursor is looking at an object and close enough
 const raycasterD = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
@@ -234,7 +225,7 @@ function onMouseMove(event) {
 }
 
 function onMouseDown(event) {
-    if (event.button === 0) { // Check if the left mouse button is clicked
+    if (event.button === 0) {
         raycasterD.setFromCamera(mouse, camera);
         const intersects = raycasterD.intersectObjects(interactiveObjects);
 
@@ -242,8 +233,8 @@ function onMouseDown(event) {
             const object = intersects[0].object;
             const distance = intersects[0].distance;
 
-            if (distance < 15) { // Increased interaction distance
-                showInfoWindow(object); // Show information about the object
+            if (distance < 15) { 
+                showInfoWindow(object);
             }
         }
     }
@@ -251,20 +242,20 @@ function onMouseDown(event) {
 
 function showInfoWindow(object) {
     const infoWindow = document.createElement('div');
-    infoWindow.style.position = 'fixed'; // Fixed position for consistent placement
-    infoWindow.style.top = '10%'; // Leave some space at the top
-    infoWindow.style.left = '0'; // Align to the left side of the screen
-    infoWindow.style.width = '25%'; // Restrict to 25% of the screen width (left half)
-    infoWindow.style.height = 'auto'; // Adjust height based on content
-    infoWindow.style.padding = '5px'; // Smaller padding for a compact look
-    infoWindow.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; // Slightly transparent background
+    infoWindow.style.position = 'fixed'; 
+    infoWindow.style.top = '10%';
+    infoWindow.style.left = '0'; 
+    infoWindow.style.width = '25%'; 
+    infoWindow.style.height = 'auto';
+    infoWindow.style.padding = '5px';
+    infoWindow.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; 
     infoWindow.style.color = 'white';
     infoWindow.style.borderRight = '2px solid white';
     infoWindow.style.overflowY = 'auto';
-    infoWindow.style.zIndex = '1000'; // Ensure it appears above other elements
-    infoWindow.style.fontSize = '0.4rem'; // Much smaller font size for compact text
-    infoWindow.style.lineHeight = '0.6rem'; // Adjust line height for better spacing
-    infoWindow.style.transition = 'left 0.3s ease'; // Smooth transition for sliding in
+    infoWindow.style.zIndex = '1000'; 
+    infoWindow.style.fontSize = '0.4rem'; 
+    infoWindow.style.lineHeight = '0.6rem'; 
+    infoWindow.style.transition = 'left 0.3s ease'; 
     infoWindow.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 0.6rem;">Object Information</h3>
         <p><strong>Name:</strong> ${object.parent.name || 'Unnamed Object'}</p>
@@ -273,18 +264,16 @@ function showInfoWindow(object) {
     `;
     document.body.appendChild(infoWindow);
 
-    // Slide the info window into view
     setTimeout(() => {
         infoWindow.style.left = '0';
     }, 10);
 
     function closeInfoWindow(event) {
         if (event.code === 'KeyX') {
-            // Slide the info window out of view
-            infoWindow.style.left = '-25%'; // Move it off-screen
+            infoWindow.style.left = '-25%';
             setTimeout(() => {
                 document.body.removeChild(infoWindow);
-            }, 300); // Wait for the transition to complete
+            }, 300); 
             document.removeEventListener('keydown', closeInfoWindow);
         }
     }
@@ -292,16 +281,14 @@ function showInfoWindow(object) {
     document.addEventListener('keydown', closeInfoWindow);
 }
 
-// Add event listeners for interaction
 document.addEventListener('mousemove', onMouseMove);
 document.addEventListener('mousedown', onMouseDown);
 
-// Expand the bounding boxes of interactive objects for easier clicking
 interactiveObjects.forEach(mesh => {
     if (mesh.geometry) {
         mesh.geometry.computeBoundingBox();
         const boundingBox = mesh.geometry.boundingBox.clone();
-        boundingBox.expandByScalar(2); // Expand the bounding box
+        boundingBox.expandByScalar(2);
         mesh.geometry.boundingBox = boundingBox;
     }
 });
@@ -432,7 +419,7 @@ gltfLoader.load(
 
 
         modelArray.forEach(mesh => {
-            // console.log("tetstststs")
+
             //console.log(mesh.name);
             mesh.scale.set(2, 2, 2);
             mesh.position.y += 10.2;
@@ -464,7 +451,6 @@ gltfLoader.load(
 
 
         modelArray.forEach(mesh => {
-            // console.log("tetstststs")
             //console.log(mesh.name);
             mesh.scale.set(2, 2, 2);
             mesh.position.y += 10.2;
@@ -487,16 +473,15 @@ gltfLoader.load(
     }
 );
 
-// Define chair configurations
 const chairConfigs = [
     {
         position: { x: -70.5, y: 0.5, z: -328 },
-        rotationY: Math.PI / 4, // Rotate 45 degrees
+        rotationY: Math.PI / 4, 
         scale: { x: 8, y: 8, z: 8 }
     },
     {
         position: { x: -77, y: 0.5, z: -309 },
-        rotationY: Math.PI / 2, // Rotate 90 degrees
+        rotationY: Math.PI / 2,
         scale: { x: 8, y: 8, z: 8 }
     },
     {
@@ -506,26 +491,20 @@ const chairConfigs = [
     }
 ];
 
-// Load and configure chairs
 gltfLoader.load(
-    'static/models/Simon Models/Chair/ArmChair_01_1k.gltf', // Path to the chair model
+    'static/models/Simon Models/Chair/ArmChair_01_1k.gltf',
     (gltf) => {
         console.log('Chair models loaded successfully');
 
         chairConfigs.forEach((config) => {
-            // Clone the chair model for each configuration
             const chair = gltf.scene.clone();
 
-            // Set position
             chair.position.set(config.position.x, config.position.y, config.position.z);
 
-            // Set rotation
             chair.rotation.y = config.rotationY;
 
-            // Set scale
             chair.scale.set(config.scale.x, config.scale.y, config.scale.z);
 
-            // Add the chair to the scene
             scene.add(chair);
         });
     },
@@ -542,22 +521,17 @@ gltfLoader.load(
 /** Soap Box Exhibit */
 
 /** Soap Box Table */
-// Load and configure table
 gltfLoader.load(
-    'static/models/Simon Models/Table/side_table_tall_01_1k.gltf', // Replace with the actual path to your table model
+    'static/models/Simon Models/Table/side_table_tall_01_1k.gltf', 
     (gltf) => {
         console.log('Table model loaded successfully');
 
-        // Access the table model
         const table = gltf.scene;
 
-        // Set the position of the table
         table.position.set(335, 0.5, -210);
 
-        // Optionally set the scale if needed
-        table.scale.set(10, 7, 10); // Adjust scale as necessary
+        table.scale.set(10, 7, 10); 
 
-        // Add the table to the scene
         scene.add(table);
     },
     (progress) => {
@@ -570,46 +544,37 @@ gltfLoader.load(
 
 /** Soap Box Model */
 
-let soapBox; // Declare the soap box globally so it can be accessed in the animation loop
-
+let soapBox; 
 gltfLoader.load(
-    'static/models/Simon Models/SoapBox/soapbox-asset.gltf', // Replace with the actual path to your soap box model
+    'static/models/Simon Models/SoapBox/soapbox-asset.gltf',
     (gltf) => {
         console.log('Soap box model loaded successfully');
 
-        // Access the soap box model
         soapBox = gltf.scene;
 
-        // Load the texture
         const soapBoxTexture = textureLoader.load(
-            'static/models/Simon Models/SoapBox/soapbox_texture.png', // Replace with the correct path to your PNG
+            'static/models/Simon Models/SoapBox/soapbox_texture.png', 
             () => console.log('Texture loaded successfully'),
             undefined,
             (error) => console.error('Error loading texture:', error)
         );
 
-        // Apply the texture to the soap box material
         soapBox.traverse((child) => {
             if (child.isMesh) {
                 child.material.map = soapBoxTexture;
                 child.material.needsUpdate = true;
 
-                // Add to interactive objects
                 interactiveObjects.push(child);
 
-                // Assign name and description
                 soapBox.name = "Soap Box";
                 soapBox.description = "A beautifully crafted soap box with intricate details.";
             }
         });
 
-        // Set the position of the soap box relative to the table
-        soapBox.position.set(335, 8.5, -210); // Adjust Y to place it on top of the table
+        soapBox.position.set(335, 8.5, -210); 
 
-        // Optionally set the scale if needed
-        soapBox.scale.set(3.5, 3.5, 3.5); // Adjust scale as necessary
+        soapBox.scale.set(3.5, 3.5, 3.5);
 
-        // Add the soap box to the scene
         scene.add(soapBox);
     },
     (progress) => {
@@ -640,7 +605,6 @@ const soapBoxFrameConfigs = [
     }
 ];
 
-// Load and configure Soap Box frames dynamically
 soapBoxFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
         'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf',
@@ -662,8 +626,8 @@ soapBoxFrameConfigs.forEach((config, index) => {
             frame.traverse((child) => {
                 if (child.isMesh) {
                     interactiveObjects.push(child);
-                    frame.name = config.name; // Assign custom name
-                    frame.description = config.description; // Assign custom description
+                    frame.name = config.name;
+                    frame.description = config.description; 
                 }
             });
         }
@@ -698,7 +662,6 @@ const unibankFrameConfigs = [
     }
 ];
 
-// Load and configure Unibank frames dynamically
 unibankFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
         'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf',
@@ -720,8 +683,8 @@ unibankFrameConfigs.forEach((config, index) => {
             frame.traverse((child) => {
                 if (child.isMesh) {
                     interactiveObjects.push(child);
-                    frame.name = config.name; // Assign custom name
-                    frame.description = config.description; // Assign custom description
+                    frame.name = config.name;
+                    frame.description = config.description; 
                 }
             });
         }
@@ -730,7 +693,6 @@ unibankFrameConfigs.forEach((config, index) => {
 
 
 /**Car Pics Exhibit */
-// Define frame configurations
 const frameConfigs = [
     // Back Wall
     {
@@ -893,51 +855,41 @@ const frameConfigs = [
     }
 ];
 
-// Load and configure car photo frames dynamically
 frameConfigs.forEach((config, index) => {
     gltfLoader.load(
-        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', // Path to the frame model
+        'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf', 
         (gltf) => {
             console.log(`Frame ${index + 1} model loaded successfully`);
 
-            // Access the frame model
             const frame = gltf.scene;
 
-            // Set position
             frame.position.set(config.position.x, config.position.y, config.position.z);
 
-            // Set rotation
             frame.rotation.y = config.rotationY;
 
-            // Scale the frame
-            frame.scale.set(22, 22, 22); // Restored original scale for the frames
+            frame.scale.set(22, 22, 22); 
 
-            // Add the frame to the scene
             scene.add(frame);
 
-            // Create a plane for the photo
-            const photoGeometry = new THREE.PlaneGeometry(0.55, 0.39); // Restored original dimensions for the photos
+            const photoGeometry = new THREE.PlaneGeometry(0.55, 0.39); 
             const photoTexture = textureLoader.load(
-                config.texturePath, // Use the texture path from the configuration
+                config.texturePath,
                 () => console.log(`Photo texture for frame ${index + 1} loaded successfully`),
                 undefined,
                 (error) => console.error(`Error loading photo texture for frame ${index + 1}:`, error)
             );
 
-            // Apply the texture to the photo material
             const photoMaterial = new THREE.MeshBasicMaterial({ map: photoTexture });
             const photo = new THREE.Mesh(photoGeometry, photoMaterial);
 
-            // Position the photo inside the frame
-            photo.position.set(0, 0, 0.01); // Slightly in front of the frame
-            frame.add(photo); // Add the photo as a child of the frame
+            photo.position.set(0, 0, 0.01);
+            frame.add(photo);
 
-            // Add to interactive objects
             frame.traverse((child) => {
                 if (child.isMesh) {
                     interactiveObjects.push(child);
-                    frame.name = config.name; // Use the custom name
-                    frame.description = config.description; // Use the custom description
+                    frame.name = config.name;
+                    frame.description = config.description;
                 }
             });
 
@@ -980,7 +932,6 @@ const isometricFrameConfigs = [
     }
 ];
 
-// Load and configure Isometric frames dynamically
 isometricFrameConfigs.forEach((config, index) => {
     gltfLoader.load(
         'static/models/Simon Models/frame/fancy_picture_frame_01_1k.gltf',
@@ -1002,15 +953,15 @@ isometricFrameConfigs.forEach((config, index) => {
             frame.traverse((child) => {
                 if (child.isMesh) {
                     interactiveObjects.push(child);
-                    frame.name = config.name; // Assign custom name
-                    frame.description = config.description; // Assign custom description
+                    frame.name = config.name;
+                    frame.description = config.description; 
                 }
             });
         }
     );
 });
 
-// Add custom descriptions for all assets
+
 function addCustomDescriptions() {
     interactiveObjects.forEach((object) => {
         if (object.name.includes("Soap Box")) {
@@ -1035,7 +986,6 @@ function addCustomDescriptions() {
     });
 }
 
-// Call this function after all objects are loaded
 addCustomDescriptions();
 
 function movementUpdate() {
@@ -1044,43 +994,36 @@ function movementUpdate() {
     if (controls.isLocked === true) {
         const delta = (time - prevTime) / 1000;
 
-        // Apply friction
         velocity.x -= velocity.x * speed * delta;
         velocity.z -= velocity.z * speed * delta;
 
-        velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+        velocity.y -= 9.8 * 100.0 * delta;
 
-        // Get movement direction
         direction.z = Number(moveForward) - Number(moveBackward);
         direction.x = Number(moveRight) - Number(moveLeft);
-        direction.normalize(); // This ensures consistent movements in all directions
+        direction.normalize();
 
-        // Update velocity based on input
         if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta;
         if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta;
 
-        // Store the original position before movement
         const originalPosition = controls.object.position.clone();
         
-        // Apply movement
         controls.moveForward(- velocity.z * delta);
         controls.moveRight(velocity.x * delta);
         
-        // After movement, check for collisions
         raycaster.ray.origin.copy(controls.object.position);
         raycaster.ray.origin.y = 10;
-        
-        // Create multiple raycasters for different directions
+
         const rayDirections = [
-            new THREE.Vector3(1, 0, 0),   // right
-            new THREE.Vector3(-1, 0, 0),  // left
-            new THREE.Vector3(0, 0, 1),   // forward
-            new THREE.Vector3(0, 0, -1),  // backward
+            new THREE.Vector3(1, 0, 0),  
+            new THREE.Vector3(-1, 0, 0), 
+            new THREE.Vector3(0, 0, 1),  
+            new THREE.Vector3(0, 0, -1), 
         ];
         
         let collision = false;
         
-        // Check for collisions in all directions
+
         for (const rayDir of rayDirections) {
             raycaster.set(raycaster.ray.origin, rayDir);
             const intersections = raycaster.intersectObjects(limitedCollisionObjects, false);
@@ -1091,44 +1034,37 @@ function movementUpdate() {
                 break;
             }
         }
-        
-        // If collision detected, revert to original position
+
         if (collision) {
             console.log("Reverting to original position");
             controls.object.position.copy(originalPosition);
-            
-            // Reset velocity to prevent "building up" momentum that causes the shooting effect
+
             velocity.x = 0;
             velocity.z = 0;
         }
 
-        // Reset velocity if no movement keys are pressed
         if (!moveForward && !moveBackward && !moveLeft && !moveRight) {
             velocity.x = 0;
             velocity.z = 0;
         }
 
-        // Update footstep sound
         updateFootstepSound();
     }
     
     prevTime = time;
 }
 
-// Throttle animation loop to ~60 FPS
 let lastTime = 0;
 function animate(time) {
-    if (time - lastTime > 16) { // ~60 FPS
+    if (time - lastTime > 16) { 
         if (controls.isLocked === true) {
             movementUpdate();
         }
 
-        // Rotate the soap box if it exists
         if (soapBox) {
-            soapBox.rotation.y += 0.05; // Rotate around the Y-axis
+            soapBox.rotation.y += 0.05; 
         }
 
-        // Update the position display
         const positionDisplay = document.getElementById('position-display');
         if (positionDisplay) {
             const { x, y, z } = camera.position;
